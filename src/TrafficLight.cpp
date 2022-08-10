@@ -82,9 +82,8 @@ void TrafficLight::cycleThroughPhases()
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            auto newPhase = _currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red;
-            _currentPhase = newPhase;
-            _messages.send(std::move(newPhase));
+            _currentPhase = _currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red;
+            _messages.send(std::move(_currentPhase));
             cycleDuration = distr(gen);
             lastUpdate = std::chrono::system_clock::now();
         }
