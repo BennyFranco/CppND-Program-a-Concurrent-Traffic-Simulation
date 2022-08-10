@@ -12,10 +12,9 @@ T MessageQueue<T>::receive()
     // to wait for and receive new messages and pull them from the queue using move semantics.
     // The received object should then be returned by the receive function.
     std::unique_lock<std::mutex> lck(_mutex);
-    _cond.wait(lck, [this]
-               { return !_queue.empty(); });
-    T message = std::move(_queue.back());
-    _queue.pop_back();
+    _cond.wait(lck, [this] { return !_queue.empty(); });
+    T message = std::move(_queue.front());
+    _queue.pop_front();
 
     return message;
 }
@@ -35,7 +34,6 @@ void MessageQueue<T>::send(T &&msg)
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
-    _messages = std::make_shared<MessageQueue<TrafficLightPhase>>();
 }
 
 void TrafficLight::waitForGreen()
@@ -45,8 +43,7 @@ void TrafficLight::waitForGreen()
     // Once it receives TrafficLightPhase::green, the method returns.
     while (true)
     {
-        _currentPhase = _messages->receive();
-        if (_currentPhase == TrafficLightPhase::green)
+        if (_messages.receive() == TrafficLightPhase::green)
             return;
     }
 }
@@ -72,29 +69,24 @@ void TrafficLight::cycleThroughPhases()
 
     std::chrono::time_point<std::chrono::system_clock> lastUpdate;
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distr(4000, 6000);
+    double cycleDuration = distr(gen);
+
     lastUpdate = std::chrono::system_clock::now();
     while (true)
     {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
-
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distr(4, 6);
-        double cycleDuration = distr(gen);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            _currentPhase = _currentPhase == TrafficLightPhase::green ? TrafficLightPhase::red : TrafficLightPhase::green;
-
-            std::future<void> queueFuture;
-            auto result = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, _messages, std::move(_currentPhase));
-
-            // _currentPhase = _messages->receive();
-            waitForGreen();
-            queueFuture.wait();
+            auto newPhase = _currentPhase == TrafficLightPhase::red ? TrafficLightPhase::green : TrafficLightPhase::red;
+            _currentPhase = newPhase;
+            _messages.send(std::move(newPhase));
+            cycleDuration = distr(gen);
+            lastUpdate = std::chrono::system_clock::now();
         }
-
-        lastUpdate = std::chrono::system_clock::now();
     }
 }

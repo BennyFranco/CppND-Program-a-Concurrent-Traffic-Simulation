@@ -3,6 +3,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include "Graphics.h"
+#include "TrafficLight.h"
 #include "Intersection.h"
 
 void Graphics::simulate()

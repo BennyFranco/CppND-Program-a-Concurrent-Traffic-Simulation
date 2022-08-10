@@ -1,5 +1,6 @@
 #include <iostream>
 #include "Vehicle.h"
+#include "TrafficLight.h"
 #include "Intersection.h"
 #include "Street.h"
 
